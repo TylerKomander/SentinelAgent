@@ -1,0 +1,9 @@
+.env
+data/
+__pycache__/
+*.pyc
+.venv/
+
+CONTEXT.md
+MEMORY.md
+config/AGENTS.md
