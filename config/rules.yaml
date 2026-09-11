@@ -1,0 +1,14 @@
+# Remediation rules. A rule matches an alert by a substring of its summary.
+#
+# auto_remediate: true  -> the agent may apply the proposed fix WITHOUT a human click.
+# auto_remediate: false -> the fix is suggested only; a human clicks "Apply fix".
+#
+# Default posture is suggest-only. The dashboard "Apply fix" button is the manual
+# path that works today. Wiring auto_remediate into the dispatcher is Phase 3.
+rules:
+  - match: "brute-force"
+    auto_remediate: false
+  - match: "C2"
+    auto_remediate: false
+  - match: "port scan"
+    auto_remediate: false
