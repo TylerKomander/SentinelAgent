@@ -337,6 +337,13 @@ def read_note(rel):
         p = _safe_in_vault(rel)
     except ValueError:
         return "BLOCKED: path escapes the vault.", True
+    if not p.exists() and p.suffix == ".md":
+        # A weak model retypes the host as the alert spelled it (203.0.113.10) instead of
+        # copying the path search_memory returned (203-0-113-10), then reads nothing and
+        # concludes there is no history. Resolve it to the note it obviously meant.
+        alt = p.with_name(_slug(p.stem) + ".md")
+        if alt.exists():
+            p = alt
     if not p.exists() or p.suffix != ".md":
         return f"(no note at {rel})", False
     return p.read_text(encoding="utf-8", errors="replace")[:8000], False

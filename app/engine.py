@@ -1,13 +1,13 @@
 from . import memory, trace
 from .ai import tools as T
-from .config import MODEL
+from .config import active_model
 from .providers import get_provider
 from .store import store
 
 
 def _trace(record, steps, provider):
     try:
-        trace.write(record, steps, provider.NAME, MODEL)
+        trace.write(record, steps, provider.NAME, active_model())
     except Exception:
         pass
 

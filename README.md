@@ -84,10 +84,15 @@ onto one note instead of spawning a second.
 Not yet: a VM run against real Suricata traffic, the `auto_remediate` flag in `config/rules.yaml`
 wired into the pipeline, and a per-day token budget.
 
-**The local backend has never been run against a real local model.** It is verified against a
-scripted OpenAI-compatible server — tool translation, the scope wall, malformed-verdict recovery
-and a dead server all covered — which proves the wiring and nothing about how well a 7B model
-triages a security alert. Expect worse verdicts than the hosted models give, and check its work.
+**What a small local model is actually like**, measured on `qwen2.5:7b` against Ollama on an
+8 GB RTX 2080 SUPER. A triage takes about 40 seconds. The scope wall held every time it tried an
+out-of-scope host, and the refusals are in the audit log. The verdicts are plausible and thin —
+`high / actionable / c2-beacon`, root cause naming both hosts and the interval — and it usually
+returns no `proposed_action` at all, so **Apply fix often has nothing to run.** It wanders: on one
+run it spent every turn on a missing tool, a log that does not exist and a note that was never
+written, and finished with no verdict. Runs differ from each other on identical input.
+
+Treat it as a triage assistant that never sleeps, not as an analyst. Check its work.
 
 **Every IP, hostname, domain and MAC in this repo is a placeholder** — RFC 5737 documentation
 addresses, RFC 1918 private ranges and `.example` names. Nothing here points at a real host, and no
