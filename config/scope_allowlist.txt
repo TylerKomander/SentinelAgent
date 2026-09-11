@@ -1,0 +1,6 @@
+# Authorized targets ONLY. One IP, CIDR, or hostname per line.
+# SentinelAgent will refuse to scan or remediate anything not listed here.
+# Replace these with the real hosts/networks you own.
+10.0.0.0/24
+127.0.0.1
+localhost
