@@ -1,0 +1,13 @@
+services:
+  sentinel:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - SENTINEL_MODEL=${SENTINEL_MODEL:-claude-opus-4-8}
+    volumes:
+      - ./config:/app/config
+      - ./data:/app/data
+    # network_mode: host   # uncomment on a Linux host to let recon reach the LAN directly
+    restart: unless-stopped

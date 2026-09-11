@@ -1,0 +1,10 @@
+.env
+data/
+.venv/
+.git/
+__pycache__/
+*.pyc
+
+CONTEXT.md
+MEMORY.md
+config/AGENTS.md
