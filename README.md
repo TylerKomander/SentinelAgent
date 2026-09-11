@@ -2,8 +2,8 @@
 
 A security alert fires and an AI analyst picks it up: it runs read-only recon, reads what it wrote
 about past incidents, and posts a verdict with a root cause, a plain-language fix and a concrete
-command — and **that command only runs when you click Apply fix.** Drop in an Anthropic API key, or
-your Claude subscription, and point it at a network you own.
+command — and **that command only runs when you click Apply fix.** Drop in an Anthropic API key, your
+Claude subscription, or a local model on your own hardware, and point it at a network you own.
 
 Not a chatbot with a shell on the end of it. The recon and remediation tools are ordinary Python
 functions in `app/ai/tools.py`, and each one checks its target against `config/scope_allowlist.txt`
@@ -30,9 +30,16 @@ Copy `.env.example` to `.env` and set one of these. The app detects which you pr
 |---|---|---|---|
 | API key (`sdk`) | `ANTHROPIC_API_KEY=sk-ant-...` | pay-per-token | `pip install anthropic` |
 | Subscription (`claude_agent`) | `CLAUDE_CODE_OAUTH_TOKEN=...`, from `claude setup-token` | your Claude Pro/Max plan | Claude Code CLI + `pip install claude-agent-sdk` |
+| Local model (`local`) | `SENTINEL_LOCAL_BASE_URL=http://127.0.0.1:11434/v1` | free, your hardware | a running Ollama, LM Studio, llama.cpp or vLLM |
 
-Both backends run the same scope-enforced tools and the same memory. `SENTINEL_PROVIDER` forces one;
-`SENTINEL_MODEL` picks the model.
+All three run the same scope-enforced tools and the same memory. `SENTINEL_PROVIDER` forces one;
+`SENTINEL_MODEL` picks the hosted model and `SENTINEL_LOCAL_MODEL` the local one.
+
+The local backend talks the OpenAI-compatible `/v1/chat/completions` API, so it is not tied to one
+runner, and it adds no Python dependency. **Pick a model that can call tools** — the scope wall works
+by the model invoking our functions, so a model that cannot do that has nothing to investigate with.
+When tool calling misfires, the provider falls back to reading a JSON verdict out of the reply and
+tells the model to try again; a small model will still produce a worse verdict than a large one.
 
 ## What's in it
 
@@ -76,6 +83,11 @@ onto one note instead of spawning a second.
 
 Not yet: a VM run against real Suricata traffic, the `auto_remediate` flag in `config/rules.yaml`
 wired into the pipeline, and a per-day token budget.
+
+**The local backend has never been run against a real local model.** It is verified against a
+scripted OpenAI-compatible server — tool translation, the scope wall, malformed-verdict recovery
+and a dead server all covered — which proves the wiring and nothing about how well a 7B model
+triages a security alert. Expect worse verdicts than the hosted models give, and check its work.
 
 **Every IP, hostname, domain and MAC in this repo is a placeholder** — RFC 5737 documentation
 addresses, RFC 1918 private ranges and `.example` names. Nothing here points at a real host, and no

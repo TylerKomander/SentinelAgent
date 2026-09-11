@@ -6,6 +6,11 @@ services:
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - SENTINEL_MODEL=${SENTINEL_MODEL:-claude-opus-4-8}
+      # A local model server on the host is not on the container's loopback:
+      # use http://host.docker.internal:11434/v1 rather than 127.0.0.1.
+      - SENTINEL_PROVIDER=${SENTINEL_PROVIDER:-}
+      - SENTINEL_LOCAL_BASE_URL=${SENTINEL_LOCAL_BASE_URL:-}
+      - SENTINEL_LOCAL_MODEL=${SENTINEL_LOCAL_MODEL:-}
     volumes:
       - ./config:/app/config
       - ./data:/app/data

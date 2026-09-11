@@ -30,8 +30,13 @@ def has_oauth_token():
     return bool(os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "").strip())
 
 
+def has_local_server():
+    return bool(os.environ.get("SENTINEL_LOCAL_BASE_URL", "").strip())
+
+
 def provider_name():
-    """sdk = Anthropic SDK (API key); claude_agent = Claude Agent SDK (subscription).
+    """sdk = Anthropic SDK (API key); claude_agent = Claude Agent SDK (subscription);
+    local = any OpenAI-compatible server (Ollama, LM Studio, llama.cpp, vLLM).
     Explicit SENTINEL_PROVIDER wins; otherwise pick by which credential is present."""
     p = os.environ.get("SENTINEL_PROVIDER", "").strip().lower()
     if p:
@@ -40,7 +45,30 @@ def provider_name():
         return "sdk"
     if has_oauth_token():
         return "claude_agent"
+    if has_local_server():
+        return "local"
     return "sdk"
+
+
+def local_base_url():
+    """OpenAI-compatible base URL. Ollama serves one at :11434/v1."""
+    return (
+        os.environ.get("SENTINEL_LOCAL_BASE_URL", "").strip()
+        or "http://127.0.0.1:11434/v1"
+    )
+
+
+def local_api_key():
+    """Local servers ignore this but many still require the header to be present."""
+    return os.environ.get("SENTINEL_LOCAL_API_KEY", "").strip() or "local"
+
+
+def local_model():
+    return os.environ.get("SENTINEL_LOCAL_MODEL", "").strip() or MODEL
+
+
+def active_model():
+    return local_model() if provider_name() == "local" else MODEL
 
 
 def scope_allowlist():

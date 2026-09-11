@@ -6,8 +6,9 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import engine
-from .config import MODEL, ROOT, has_api_key, scope_allowlist, suricata_eve_path
+from .config import ROOT, active_model, has_api_key, scope_allowlist, suricata_eve_path
 from .models import Alert
+from .providers import get_provider
 from .sensors import suricata
 from .sensors.demo import random_alert
 from .store import store
@@ -32,7 +33,16 @@ def index():
 
 @app.get("/api/status")
 def status():
-    return {"has_key": has_api_key(), "model": MODEL, "scope": scope_allowlist()}
+    provider = get_provider()
+    ready, reason = provider.available()
+    return {
+        "has_key": has_api_key(),
+        "provider": provider.NAME,
+        "ready": ready,
+        "reason": reason,
+        "model": active_model(),
+        "scope": scope_allowlist(),
+    }
 
 
 @app.get("/api/alerts")

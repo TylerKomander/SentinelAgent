@@ -15,15 +15,15 @@ function esc(s) {
 
 async function loadStatus() {
   const s = await j("/api/status");
-  document.getElementById("model").textContent = "model: " + s.model;
+  document.getElementById("model").textContent =
+    "model: " + s.model + " (" + s.provider + ")";
   document.getElementById("scope").textContent =
     "scope: " + (s.scope.join(", ") || "none set");
   const b = document.getElementById("keybanner");
-  if (!s.has_key) {
+  if (!s.ready) {
     b.classList.remove("hidden");
     b.textContent =
-      "No ANTHROPIC_API_KEY set — add it to .env and restart to enable AI triage. " +
-      "The dashboard and sensors work without it.";
+      s.reason + " The dashboard and sensors work without it.";
   } else {
     b.classList.add("hidden");
   }
