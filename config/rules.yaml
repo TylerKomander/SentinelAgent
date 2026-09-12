@@ -1,10 +1,19 @@
-# Remediation rules. A rule matches an alert by a substring of its summary.
+# Remediation rules. A rule matches an alert by a case-insensitive substring of its
+# summary; the first match wins. No matching rule means no automatic action.
 #
-# auto_remediate: true  -> the agent may apply the proposed fix WITHOUT a human click.
-# auto_remediate: false -> the fix is suggested only; a human clicks "Apply fix".
+# auto_remediate: true  -> the agent MAY apply the fix with nobody watching.
+# auto_remediate: false -> suggest only; a human clicks "Apply fix" on the dashboard.
 #
-# Default posture is suggest-only. The dashboard "Apply fix" button is the manual
-# path that works today. Wiring auto_remediate into the dispatcher is Phase 3.
+# Opting a rule in is necessary but NOT sufficient. An unattended fix also requires:
+#   1. SENTINEL_AUTO_REMEDIATE armed in the environment (master switch, default off)
+#   2. a verdict of `actionable` carrying a proposed_action
+#   3. action_verified — the target IP was seen in real tool output, not just claimed
+#      by the alert, which a synthetic or spoofed alert could do
+#   4. the command matching a shape in config/remediation_allowlist.txt
+#   5. the command not already applied (the ledger in data/applied.jsonl)
+#
+# Every refusal is written to the audit log with the gate that stopped it.
+# Default posture is suggest-only. Turn a rule on once you trust it on that alert type.
 rules:
   - match: "brute-force"
     auto_remediate: false

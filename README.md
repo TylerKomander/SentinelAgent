@@ -58,6 +58,9 @@ tells the model to try again; a small model will still produce a worse verdict t
   detections is a config change.
 - **Apply fix** — the verdict's command, run only if it matches an approved command shape in
   `config/remediation_allowlist.txt`, and only on your click.
+- **Unattended remediation** — off by default. Arming it takes a master switch *and* a rule that
+  opts in *and* a target the agent saw in real tool output. Applied commands are ledgered, so the
+  same ban never fires twice.
 
 ## What it can touch, and what stops it
 
@@ -68,7 +71,10 @@ tells the model to try again; a small model will still produce a worse verdict t
 | No shell | remediation runs via `shlex.split` + argv, never `shell=True`, so `;` `&&` `|` `$()` are not syntax |
 | Destructive-command deny list | `apply_fix()`, a backstop in case a careless shape is added to the allowlist |
 | Read-only triage | the triage tool set contains no tool that changes anything |
-| Human in the loop | remediation has its own endpoint and only runs from the Apply fix button |
+| Evidence-gated targets | `engine._verify_action_target()` — a command may only name an IP that appeared in real tool output, never one the alert merely claimed |
+| Five gates on unattended fixes | `engine._auto_gate()` — master switch, rule opt-in, actionable verdict, verified target, and not already applied. Each refusal is audited by name |
+| Idempotent actions | `data/applied.jsonl` — a command that already ran is skipped, and the ledger survives restart |
+| Human in the loop | on by default: with `SENTINEL_AUTO_REMEDIATE` unset, nothing runs without the Apply fix button |
 | Audit log | every block, verdict and applied fix is appended to `data/audit.jsonl` |
 
 Blocks are refusals the model sees and has to work around, not silent drops.
@@ -80,8 +86,8 @@ on the observation scope would refuse every legitimate fix. Every shape shipped 
 allowlist can only ADD a block — none can remove one, flush a table, or stop a service.
 
 **This is a gate, not a sandbox.** Deny-by-default is a much stronger position than a blacklist, but
-the shapes you add are yours to get right, and nothing here proves the model proposes the *correct*
-target. Run it in the container or a VM, on a network you own, and keep both lists as small as the
+the shapes you add are yours to get right. The evidence check narrows *which* address a command may
+name — it cannot tell you the model read that evidence correctly. Run it in the container or a VM, on a network you own, and keep both lists as small as the
 job needs.
 
 ## Where it stands
