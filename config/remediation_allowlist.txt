@@ -1,0 +1,29 @@
+# Commands SentinelAgent is permitted to EXECUTE as a remediation.
+#
+# DENY BY DEFAULT: if a proposed fix does not match one of these shapes exactly,
+# it is not run. Editing this file is how you widen what the agent may do.
+#
+# Placeholders (these are the only wildcards):
+#   <ip>    a single IPv4 address        <cidr>  an IPv4 network in CIDR form
+#   <port>  a port number                <text>  a short safe label (no shell metacharacters)
+#
+# Scope note: the IP in a block rule is the ATTACKER, so it is deliberately NOT
+# checked against config/scope_allowlist.txt — that file governs what the agent may
+# LOOK AT, not who it may name in a firewall rule. Safety here comes from the shape
+# of the command: every pattern below can only ever ADD a block. None can remove one.
+
+ufw deny from <ip>
+ufw deny from <ip> to any
+ufw deny from <ip> to any port <port>
+ufw deny from <ip> to any port <port> comment <text>
+ufw deny from <cidr>
+ufw deny from <cidr> to any port <port>
+
+iptables -A INPUT -s <ip> -j DROP
+iptables -A INPUT -s <ip> -p tcp --dport <port> -j DROP
+iptables -A INPUT -s <cidr> -j DROP
+
+nft add rule inet filter input ip saddr <ip> drop
+nft add rule inet filter input ip saddr <cidr> drop
+
+fail2ban-client set sshd banip <ip>

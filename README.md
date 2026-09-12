@@ -56,24 +56,33 @@ tells the model to try again; a small model will still produce a worse verdict t
 - **Sensors** — `app/sensors/demo.py` emits synthetic alerts and `app/sensors/suricata.py` tails a
   real `eve.json` (set `SURICATA_EVE_PATH`). Both produce the same `Alert`, so switching to real
   detections is a config change.
-- **Apply fix** — the verdict's command, run behind the same scope check plus a destructive-command
-  deny list, and only on your click.
+- **Apply fix** — the verdict's command, run only if it matches an approved command shape in
+  `config/remediation_allowlist.txt`, and only on your click.
 
 ## What it can touch, and what stops it
 
 | Guard | Where it is enforced |
 |---|---|
-| Scope allowlist | `in_scope()` in `app/ai/tools.py`, on every scan and on every IP inside a remediation command |
-| Destructive-command deny list | `apply_fix()` in `app/ai/tools.py`, matched before the command runs |
+| Observation scope allowlist | `in_scope()` in `app/ai/tools.py`, on every scan — governs what the agent may LOOK AT |
+| Remediation shape allowlist | `apply_fix()` in `app/ai/tools.py` — deny by default; a command runs only if it matches a shape in `config/remediation_allowlist.txt` |
+| No shell | remediation runs via `shlex.split` + argv, never `shell=True`, so `;` `&&` `|` `$()` are not syntax |
+| Destructive-command deny list | `apply_fix()`, a backstop in case a careless shape is added to the allowlist |
 | Read-only triage | the triage tool set contains no tool that changes anything |
 | Human in the loop | remediation has its own endpoint and only runs from the Apply fix button |
 | Audit log | every block, verdict and applied fix is appended to `data/audit.jsonl` |
 
 Blocks are refusals the model sees and has to work around, not silent drops.
 
-**The deny list is a backstop, not a sandbox.** It matches known-destructive strings in a shell
-command; it is not a proof that nothing harmful gets through. Run this in the container or a VM, on a
-network you own, and keep the allowlist as small as the job needs.
+**Two different questions, two different lists.** `config/scope_allowlist.txt` decides what the agent
+may *look at*; `config/remediation_allowlist.txt` decides what it may *run*. They are deliberately
+separate: a firewall block rule names the attacker, who is never a host you own, so gating remediation
+on the observation scope would refuse every legitimate fix. Every shape shipped in the remediation
+allowlist can only ADD a block — none can remove one, flush a table, or stop a service.
+
+**This is a gate, not a sandbox.** Deny-by-default is a much stronger position than a blacklist, but
+the shapes you add are yours to get right, and nothing here proves the model proposes the *correct*
+target. Run it in the container or a VM, on a network you own, and keep both lists as small as the
+job needs.
 
 ## Where it stands
 

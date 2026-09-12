@@ -83,6 +83,19 @@ def scope_allowlist():
     return out
 
 
+def remediation_allowlist():
+    """Command shapes the agent may execute. Empty file or missing = execute nothing."""
+    f = CONFIG_DIR / "remediation_allowlist.txt"
+    if not f.exists():
+        return []
+    out = []
+    for line in f.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#"):
+            out.append(line)
+    return out
+
+
 def suricata_eve_path():
     """Path to Suricata's eve.json. If set, the app tails it and feeds real alerts
     into the dashboard. Blank = demo feed only."""

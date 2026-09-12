@@ -1,11 +1,12 @@
 import ipaddress
 import re
+import shlex
 import shutil
 import socket
 import subprocess
 
 from .. import memory
-from ..config import ROOT, scope_allowlist
+from ..config import ROOT, remediation_allowlist, scope_allowlist
 from ..store import store
 
 LOGS_DIR = ROOT / "data" / "logs"
@@ -163,7 +164,13 @@ TRIAGE_TOOLS = [
                 "proposed_action": {
                     "type": ["string", "null"],
                     "description": "A single concrete shell command that applies the "
-                    "fix, targeting only in-scope hosts, or null if none is safe.",
+                    "fix, or null if none is safe. It will only be executed if it "
+                    "matches an approved shape, so use one of: "
+                    "'ufw deny from <ip>[ to any[ port <port>]]', "
+                    "'iptables -A INPUT -s <ip> -j DROP', "
+                    "'nft add rule inet filter input ip saddr <ip> drop', "
+                    "'fail2ban-client set sshd banip <ip>'. No pipes, no chaining, "
+                    "no sudo prefix. Anything else is reported but never run.",
                 },
                 "confidence": {
                     "type": "string",
@@ -240,29 +247,67 @@ def execute(name, inp, record):
     return f"(unknown tool {name})", True
 
 
+_PLACEHOLDERS = {
+    "<ip>": r"\d{1,3}(?:\.\d{1,3}){3}",
+    "<cidr>": r"\d{1,3}(?:\.\d{1,3}){3}/\d{1,2}",
+    "<port>": r"\d{1,5}",
+    "<text>": r"[\w.:/@-]+",
+}
+
+
+def _compile(pattern):
+    parts = [_PLACEHOLDERS.get(tok, re.escape(tok)) for tok in pattern.split()]
+    return re.compile(r"\s+".join(parts))
+
+
+def _matches_allowlist(command):
+    for pattern in remediation_allowlist():
+        if _compile(pattern).fullmatch(command):
+            return pattern
+    return None
+
+
 def apply_fix(command, record):
-    """Execute a remediation command, gated by deny list + scope. Returns (ok, output)."""
+    """Execute a remediation command. DENY BY DEFAULT: the command must match a shape in
+    config/remediation_allowlist.txt, or it does not run. Returns (ok, output)."""
+
+    def blocked(reason, message):
+        store.audit(
+            "remediation_blocked",
+            {"id": record.alert.id, "command": command, "reason": reason},
+        )
+        return False, message
+
+    command = " ".join(command.split())
+    if not command:
+        return blocked("empty", "BLOCKED: empty command.")
+
+    # Backstop only. The allowlist below is the real gate; this catches a careless
+    # pattern added to the allowlist file by hand.
     low = command.lower()
     for d in DENY:
         if d in low:
-            store.audit(
-                "remediation_blocked",
-                {"id": record.alert.id, "command": command, "reason": d},
-            )
-            return False, f"BLOCKED by deny list (matched '{d}'). Not executed."
-    for ip in IP_RE.findall(command):
-        if not in_scope(ip):
-            store.audit(
-                "remediation_blocked",
-                {"id": record.alert.id, "command": command, "reason": f"oos {ip}"},
-            )
-            return False, f"BLOCKED: command targets {ip}, which is out of scope."
-    try:
-        p = subprocess.run(
-            command, shell=True, capture_output=True, text=True, timeout=120
+            return blocked(d, f"BLOCKED by deny list (matched '{d}'). Not executed.")
+
+    pattern = _matches_allowlist(command)
+    if not pattern:
+        return blocked(
+            "not allowlisted",
+            "BLOCKED: this command does not match any approved remediation shape in "
+            "config/remediation_allowlist.txt. Not executed.",
         )
+
+    try:
+        argv = shlex.split(command)
+    except ValueError as e:
+        return blocked("unparseable", f"BLOCKED: could not parse command ({e}).")
+
+    try:
+        p = subprocess.run(argv, capture_output=True, text=True, timeout=120)
         ok = p.returncode == 0
         out = ((p.stdout or "") + (p.stderr or "")).strip()[:6000]
         return ok, out or f"(exit {p.returncode}, no output)"
+    except FileNotFoundError:
+        return False, f"(command '{argv[0]}' is not installed on this host)"
     except Exception as e:
         return False, f"{type(e).__name__}: {e}"
