@@ -5,6 +5,28 @@ from .providers import get_provider
 from .store import store
 
 
+def _verify_action_target(record):
+    """An action is only justified against an IP the agent actually observed in tool
+    output. The alert's own fields do not count as evidence — a synthetic or spoofed
+    alert would otherwise nominate its own target. Sets verdict.action_verified."""
+    v = record.verdict
+    if not v or not v.proposed_action:
+        return
+    targets = T.IP_RE.findall(v.proposed_action)
+    unseen = [ip for ip in targets if ip not in record.observed_ips]
+    v.action_verified = not unseen
+    if unseen:
+        record.recon_log.append(
+            f"[unverified] proposed action targets {', '.join(unseen)} — never seen in "
+            "any tool output. Manual apply only."
+        )
+        store.audit(
+            "action_unverified",
+            {"id": record.alert.id, "command": v.proposed_action,
+             "unseen": unseen, "observed": record.observed_ips},
+        )
+
+
 def _trace(record, steps, provider):
     try:
         trace.write(record, steps, provider.NAME, active_model())
@@ -36,6 +58,7 @@ def triage(record):
         _trace(record, steps, provider)
         return record
 
+    _verify_action_target(record)
     record.status = "triaged"
     store.audit(
         "triaged",

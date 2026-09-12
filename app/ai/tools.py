@@ -172,6 +172,16 @@ TRIAGE_TOOLS = [
                     "'fail2ban-client set sshd banip <ip>'. No pipes, no chaining, "
                     "no sudo prefix. Anything else is reported but never run.",
                 },
+                "action_evidence": {
+                    "type": ["string", "null"],
+                    "description": "REQUIRED whenever proposed_action is not null. Name the "
+                    "IP the command targets and quote the specific tool output that "
+                    "identifies it as the actor to block (e.g. 'auth.log shows 15 failed "
+                    "root logins from 198.51.100.34'). Do NOT target an IP merely because "
+                    "the alert named it — target the one the evidence incriminates. If you "
+                    "cannot point at observed evidence for the target, set proposed_action "
+                    "to null instead.",
+                },
                 "confidence": {
                     "type": "string",
                     "enum": ["low", "medium", "high"],
@@ -187,7 +197,18 @@ TRIAGE_TOOLS = [
 
 
 def execute(name, inp, record):
-    """Run a recon tool. Returns (output_text, is_error)."""
+    """Run a recon tool and record every IP the output actually revealed. Returns
+    (output_text, is_error). The observed set is what `proposed_action` is checked
+    against later — an IP the agent never saw in evidence is not a justified target."""
+    out, err = _execute(name, inp, record)
+    if not err:
+        for ip in IP_RE.findall(out or ""):
+            if ip not in record.observed_ips:
+                record.observed_ips.append(ip)
+    return out, err
+
+
+def _execute(name, inp, record):
     if name == "port_scan":
         t = inp.get("target", "")
         if not in_scope(t):

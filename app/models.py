@@ -28,6 +28,8 @@ class Verdict(BaseModel):
     root_cause: str
     suggested_fix: str
     proposed_action: Optional[str] = None
+    action_evidence: Optional[str] = None
+    action_verified: Optional[bool] = None
     confidence: Literal["low", "medium", "high"] = "medium"
 
 
@@ -36,6 +38,7 @@ class AlertRecord(BaseModel):
     status: Status = "new"
     verdict: Optional[Verdict] = None
     recon_log: list = Field(default_factory=list)
+    observed_ips: list = Field(default_factory=list)
     error: Optional[str] = None
     remediation: Optional[dict] = None
     report_path: Optional[str] = None
