@@ -119,3 +119,13 @@ def vault_dir():
 def agent_brief():
     f = CONFIG_DIR / "agent_brief.md"
     return f.read_text(encoding="utf-8") if f.exists() else ""
+
+
+def dedup_window_seconds():
+    """Repeat alerts (same source/signature/src/dst) inside this sliding window
+    collapse into one record with a count. A port scan is one event to an analyst,
+    not four hundred. 0 disables coalescing."""
+    try:
+        return float(os.environ.get("SENTINEL_DEDUP_WINDOW", "300"))
+    except ValueError:
+        return 300.0

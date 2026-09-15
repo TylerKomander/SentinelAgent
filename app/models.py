@@ -35,6 +35,8 @@ class Verdict(BaseModel):
 
 class AlertRecord(BaseModel):
     alert: Alert
+    count: int = 1
+    last_ts: float = Field(default_factory=time.time)
     status: Status = "new"
     verdict: Optional[Verdict] = None
     recon_log: list = Field(default_factory=list)

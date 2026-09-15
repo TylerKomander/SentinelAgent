@@ -36,6 +36,7 @@ function card(r) {
     <div class="row">
       <span class="sev" style="background:${c}">${a.severity}</span>
       <span class="src">${esc(a.src_ip || "?")} &rarr; ${esc(a.dst_ip || "?")}</span>
+      ${r.count > 1 ? `<span class="count" title="repeats coalesced">&times;${r.count}</span>` : ""}
       <span class="status ${r.status}">${r.status}</span>
     </div>
     <div class="summary">${esc(a.summary)}</div>`;
@@ -81,7 +82,9 @@ async function apply(id) {
 
 async function load() {
   const rs = await j("/api/alerts");
-  document.getElementById("count").textContent = rs.length + " alerts";
+  const events = rs.reduce((n, r) => n + (r.count || 1), 0);
+  document.getElementById("count").textContent =
+    rs.length + " alerts" + (events > rs.length ? ` (${events} events)` : "");
   document.getElementById("alerts").innerHTML =
     rs.map(card).join("") ||
     '<p class="empty">No alerts yet. Inject a demo alert to see the pipeline.</p>';

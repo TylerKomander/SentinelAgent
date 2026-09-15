@@ -115,3 +115,12 @@ pre {
   overflow-x: auto;
   white-space: pre-wrap;
 }
+
+.count {
+  background: #2a2f3a;
+  color: #cdd3de;
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}

@@ -73,6 +73,14 @@ def triage_prompt(record):
         "memory recall: " + ("found prior context" if prior else "no prior notes")
     )
     content = f"A security alert fired. Triage it.\n\nAlert:\n{payload}"
+    if record.count > 1:
+        span = max(record.last_ts - record.alert.ts, 0)
+        content += (
+            f"\n\nVOLUME: this identical signature and endpoint pair fired "
+            f"{record.count} times over {span:.0f}s (the alert above is the first). "
+            "Sustained repetition is evidence in itself — treat it as one campaign, "
+            "not one packet, and weigh the rate when judging severity."
+        )
     if prior:
         content += (
             "\n\nPRIOR RELATED INCIDENTS FROM MEMORY (consult before deciding; stay "

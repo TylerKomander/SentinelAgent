@@ -2,24 +2,42 @@ import json
 import threading
 import time
 
-from .config import ROOT
+from .config import ROOT, dedup_window_seconds
 from .models import Alert, AlertRecord
 
 AUDIT = ROOT / "data" / "audit.jsonl"
 APPLIED = ROOT / "data" / "applied.jsonl"
 
 
+def _fingerprint(alert: Alert):
+    """What makes two alerts the same event. Signature and endpoints — not the id,
+    not the timestamp, not the packet."""
+    return (alert.source, alert.summary, alert.src_ip, alert.dst_ip)
+
+
 class Store:
     def __init__(self):
         self._records = {}
+        self._by_fp = {}
         self._lock = threading.Lock()
         AUDIT.parent.mkdir(exist_ok=True)
         self._applied = self._load_applied()
 
     def add_alert(self, alert: Alert) -> AlertRecord:
-        rec = AlertRecord(alert=alert)
+        """A repeat of something already in the queue bumps the count on the existing
+        record instead of adding a row. One nmap scan is thousands of eve.json events
+        and one thing an analyst needs to look at."""
+        fp = _fingerprint(alert)
+        window = dedup_window_seconds()
         with self._lock:
+            existing = self._records.get(self._by_fp.get(fp))
+            if existing and window > 0 and alert.ts - existing.last_ts <= window:
+                existing.count += 1
+                existing.last_ts = alert.ts
+                return existing
+            rec = AlertRecord(alert=alert, last_ts=alert.ts)
             self._records[alert.id] = rec
+            self._by_fp[fp] = alert.id
         self.audit("alert_received", {"id": alert.id, "summary": alert.summary})
         return rec
 
@@ -28,7 +46,7 @@ class Store:
 
     def all(self):
         return sorted(
-            self._records.values(), key=lambda r: r.alert.ts, reverse=True
+            self._records.values(), key=lambda r: r.last_ts, reverse=True
         )
 
     @staticmethod

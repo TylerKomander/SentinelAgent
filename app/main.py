@@ -47,7 +47,12 @@ def status():
 
 @app.get("/api/alerts")
 def list_alerts():
-    return [r.model_dump() for r in store.all()]
+    """The queue view, polled every 2s. Drops the raw sensor event — the UI never
+    renders it and a Suricata eve.json record is orders of magnitude larger than
+    everything else on the card. Fetch one alert to get its raw."""
+    return [
+        r.model_dump(exclude={"alert": {"raw"}}) for r in store.all()
+    ]
 
 
 @app.get("/api/alerts/{aid}")
