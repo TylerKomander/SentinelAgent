@@ -1,0 +1,19 @@
+# SentinelAgent remediation privileges.
+#
+# The dashboard runs as an unprivileged user, but a firewall block needs root.
+# This grants passwordless sudo for ONLY the four binaries the remediation
+# allowlist can invoke — nothing else. The command shape is already gated in
+# app/ai/tools.py before execution; this file only decides which programs may
+# run as root without a password.
+#
+# INSTALL (run as root on the victim/host, replacing the user if not 'administrator'):
+#   sudo cp deploy/sentinel-sudoers /etc/sudoers.d/sentinel
+#   sudo sed -i "s/__USER__/$(logname)/" /etc/sudoers.d/sentinel
+#   sudo chmod 440 /etc/sudoers.d/sentinel
+#   sudo visudo -cf /etc/sudoers.d/sentinel   # must print "parsed OK"
+#
+# Then restart the app. Remove the file to revoke every remediation privilege at once.
+
+Cmnd_Alias SENTINEL_FIREWALL = /usr/sbin/ufw, /sbin/ufw, /usr/sbin/iptables, /sbin/iptables, /usr/sbin/nft, /sbin/nft, /usr/bin/fail2ban-client, /bin/fail2ban-client
+
+__USER__ ALL=(root) NOPASSWD: SENTINEL_FIREWALL

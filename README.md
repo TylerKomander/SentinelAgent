@@ -79,6 +79,7 @@ tells the model to try again; a small model will still produce a worse verdict t
 | Evidence-gated targets | `engine._verify_action_target()` — a command may only name an IP that appeared in real tool output, never one the alert merely claimed |
 | Five gates on unattended fixes | `engine._auto_gate()` — master switch, rule opt-in, actionable verdict, verified target, and not already applied. Each refusal is audited by name |
 | Idempotent actions | `data/applied.jsonl` — a command that already ran is skipped, and the ledger survives restart |
+| Least privilege | the app runs unprivileged; remediation shells out through `sudo -n` with a sudoers drop-in (`deploy/sentinel-sudoers`) that grants NOPASSWD for only `ufw`, `iptables`, `nft`, `fail2ban-client` — never blanket root |
 | Human in the loop | on by default: with `SENTINEL_AUTO_REMEDIATE` unset, nothing runs without the Apply fix button |
 | Audit log | every block, verdict and applied fix is appended to `data/audit.jsonl` |
 

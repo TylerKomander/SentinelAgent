@@ -1,4 +1,5 @@
 import ipaddress
+import os
 import re
 import shlex
 import shutil
@@ -322,6 +323,15 @@ def apply_fix(command, record):
         argv = shlex.split(command)
     except ValueError as e:
         return blocked("unparseable", f"BLOCKED: could not parse command ({e}).")
+
+    # Firewall commands need root, but the dashboard has no business running as root.
+    # When the service is unprivileged, hand the already-shape-checked argv to sudo in
+    # non-interactive mode. A sudoers drop-in (deploy/sentinel-sudoers) grants NOPASSWD
+    # for only the remediation binaries; anything else fails closed on a password prompt
+    # sudo -n will not answer. When the app is already root (e.g. in the container) sudo
+    # is unnecessary and may be absent, so skip it.
+    if os.name == "posix" and os.geteuid() != 0:
+        argv = ["sudo", "-n", *argv]
 
     try:
         p = subprocess.run(argv, capture_output=True, text=True, timeout=120)
