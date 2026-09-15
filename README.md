@@ -56,6 +56,11 @@ tells the model to try again; a small model will still produce a worse verdict t
 - **Sensors** — `app/sensors/demo.py` emits synthetic alerts and `app/sensors/suricata.py` tails a
   real `eve.json` (set `SURICATA_EVE_PATH`). Both produce the same `Alert`, so switching to real
   detections is a config change.
+- **Alert coalescing** — one port scan is thousands of IDS events and one thing worth looking at,
+  so repeats of the same signature between the same endpoints collapse into a single card with a
+  count. The window is `SENTINEL_DEDUP_WINDOW` (300 seconds by default, `0` to disable). The count
+  is given to the analyst as evidence, and a card that keeps counting after you applied a fix is
+  telling you the traffic did not stop.
 - **Apply fix** — the verdict's command, run only if it matches an approved command shape in
   `config/remediation_allowlist.txt`, and only on your click.
 - **Unattended remediation** — off by default. Arming it takes a master switch *and* a rule that
