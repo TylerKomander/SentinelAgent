@@ -129,3 +129,17 @@ def dedup_window_seconds():
         return float(os.environ.get("SENTINEL_DEDUP_WINDOW", "300"))
     except ValueError:
         return 300.0
+
+
+def bind_host():
+    """Loopback unless told otherwise. On a headless lab box you need 0.0.0.0 to reach
+    the dashboard from another machine — that is an explicit choice, not a default,
+    because the dashboard has no authentication in front of it."""
+    return os.environ.get("SENTINEL_HOST", "").strip() or "127.0.0.1"
+
+
+def bind_port():
+    try:
+        return int(os.environ.get("SENTINEL_PORT", "8000"))
+    except ValueError:
+        return 8000
