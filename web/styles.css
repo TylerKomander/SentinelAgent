@@ -124,3 +124,21 @@ pre {
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
+
+button.ghost {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid #2a2f3a;
+  margin-left: auto;
+}
+button.ghost:hover { color: #e6e9ef; border-color: #3a4250; filter: none; }
+.card .row .dismiss {
+  background: transparent;
+  color: var(--muted);
+  border: 0;
+  padding: 0 6px;
+  margin-left: 8px;
+  font-size: 18px;
+  line-height: 1;
+}
+.card .row .dismiss:hover { color: #e23b3b; filter: none; }

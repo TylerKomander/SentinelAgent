@@ -44,6 +44,28 @@ class Store:
     def get(self, alert_id: str):
         return self._records.get(alert_id)
 
+    def remove(self, alert_id: str) -> bool:
+        """Drop an alert from the live board. The record stays in the append-only audit
+        log and, if it was triaged, in the memory vault — dismissing clears the queue,
+        it does not erase history."""
+        with self._lock:
+            rec = self._records.pop(alert_id, None)
+            if rec is None:
+                return False
+            fp = _fingerprint(rec.alert)
+            if self._by_fp.get(fp) == alert_id:
+                del self._by_fp[fp]
+        self.audit("alert_dismissed", {"id": alert_id})
+        return True
+
+    def clear(self) -> int:
+        with self._lock:
+            n = len(self._records)
+            self._records.clear()
+            self._by_fp.clear()
+        self.audit("alerts_cleared", {"count": n})
+        return n
+
     def all(self):
         return sorted(
             self._records.values(), key=lambda r: r.last_ts, reverse=True

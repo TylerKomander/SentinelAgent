@@ -38,6 +38,7 @@ function card(r) {
       <span class="src">${esc(a.src_ip || "?")} &rarr; ${esc(a.dst_ip || "?")}</span>
       ${r.count > 1 ? `<span class="count" title="repeats coalesced">&times;${r.count}</span>` : ""}
       <span class="status ${r.status}">${r.status}</span>
+      <button class="dismiss" title="dismiss" onclick="dismiss('${a.id}')">&times;</button>
     </div>
     <div class="summary">${esc(a.summary)}</div>`;
 
@@ -74,6 +75,11 @@ async function triage(id) {
   load();
 }
 
+async function dismiss(id) {
+  await fetch(`/api/alerts/${id}`, { method: "DELETE" });
+  load();
+}
+
 async function apply(id) {
   if (!confirm("Apply this fix to the live system?")) return;
   await fetch(`/api/alerts/${id}/apply`, { method: "POST" });
@@ -92,6 +98,12 @@ async function load() {
 
 document.getElementById("demo").onclick = async () => {
   await fetch("/api/demo", { method: "POST" });
+  load();
+};
+
+document.getElementById("clear").onclick = async () => {
+  if (!confirm("Clear all alerts from the board? The audit log keeps them.")) return;
+  await fetch("/api/alerts", { method: "DELETE" });
   load();
 };
 

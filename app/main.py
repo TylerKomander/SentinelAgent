@@ -68,6 +68,18 @@ def ingest(alert: Alert):
     return store.add_alert(alert).model_dump()
 
 
+@app.delete("/api/alerts")
+def clear_alerts():
+    return {"cleared": store.clear()}
+
+
+@app.delete("/api/alerts/{aid}")
+def dismiss_alert(aid: str):
+    if not store.remove(aid):
+        raise HTTPException(404, "alert not found")
+    return {"ok": True}
+
+
 @app.post("/api/demo")
 def demo():
     return store.add_alert(random_alert()).model_dump()
