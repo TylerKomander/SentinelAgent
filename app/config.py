@@ -83,15 +83,6 @@ def scope_allowlist():
     return out
 
 
-def auto_remediate_armed():
-    """Master switch for unattended remediation. OFF unless explicitly set. A rule
-    opting in is not enough — you also have to arm the machine, and this is the one
-    line to flip when you want it to stop."""
-    return os.environ.get("SENTINEL_AUTO_REMEDIATE", "").strip().lower() in (
-        "1", "true", "yes", "on",
-    )
-
-
 def remediation_allowlist():
     """Command shapes the agent may execute. Empty file or missing = execute nothing."""
     f = CONFIG_DIR / "remediation_allowlist.txt"

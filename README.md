@@ -63,9 +63,9 @@ tells the model to try again; a small model will still produce a worse verdict t
   telling you the traffic did not stop.
 - **Apply fix** — the verdict's command, run only if it matches an approved command shape in
   `config/remediation_allowlist.txt`, and only on your click.
-- **Unattended remediation** — off by default. Arming it takes a master switch *and* a rule that
-  opts in *and* a target the agent saw in real tool output. Applied commands are ledgered, so the
-  same ban never fires twice.
+- **Human in the loop, always** — the agent proposes the fix and never runs it on its own. A command
+  executes only when you click Apply fix, and applied commands are ledgered so the same ban never
+  fires twice.
 
 ## What it can touch, and what stops it
 
@@ -77,10 +77,9 @@ tells the model to try again; a small model will still produce a worse verdict t
 | Destructive-command deny list | `apply_fix()`, a backstop in case a careless shape is added to the allowlist |
 | Read-only triage | the triage tool set contains no tool that changes anything |
 | Evidence-gated targets | `engine._verify_action_target()` — a command may only name an IP that appeared in real tool output, never one the alert merely claimed |
-| Five gates on unattended fixes | `engine._auto_gate()` — master switch, rule opt-in, actionable verdict, verified target, and not already applied. Each refusal is audited by name |
 | Idempotent actions | `data/applied.jsonl` — a command that already ran is skipped, and the ledger survives restart |
 | Least privilege | the app runs unprivileged; remediation shells out through `sudo -n` with a sudoers drop-in (`deploy/sentinel-sudoers`) that grants NOPASSWD for only `ufw`, `iptables`, `nft`, `fail2ban-client` — never blanket root |
-| Human in the loop | on by default: with `SENTINEL_AUTO_REMEDIATE` unset, nothing runs without the Apply fix button |
+| Human in the loop | remediation runs only on an explicit Apply fix click — the agent never applies a fix on its own |
 | Audit log | every block, verdict and applied fix is appended to `data/audit.jsonl` |
 
 Blocks are refusals the model sees and has to work around, not silent drops.
@@ -102,8 +101,7 @@ Proven: the full loop has run live on WSL against Claude Sonnet 4.6 — recon, v
 — with out-of-scope targets refused, `rm -rf` refused by the deny list, and repeat alerts deduplicating
 onto one note instead of spawning a second.
 
-Not yet: a VM run against real Suricata traffic, the `auto_remediate` flag in `config/rules.yaml`
-wired into the pipeline, and a per-day token budget.
+Not yet: a per-day token budget and a persistent alert queue.
 
 **What a small local model is actually like**, measured on `qwen2.5:7b` against Ollama on an
 8 GB RTX 2080 SUPER. A triage takes about 40 seconds. The scope wall held every time it tried an

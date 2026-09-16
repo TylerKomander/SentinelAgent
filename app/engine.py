@@ -1,6 +1,6 @@
-from . import memory, rules, trace
+from . import memory, trace
 from .ai import tools as T
-from .config import active_model, auto_remediate_armed
+from .config import active_model
 from .providers import get_provider
 from .store import store
 
@@ -73,45 +73,7 @@ def triage(record):
             {"id": alert.id, "stage": "triage", "error": f"{type(e).__name__}: {e}"},
         )
     _trace(record, steps, provider)
-    auto_remediate(record)
     return record
-
-
-def _auto_gate(record):
-    """(allowed, reason) for firing a fix with nobody watching. Every condition is a
-    separate refusal so the audit log says which one stopped it."""
-    v = record.verdict
-    if not auto_remediate_armed():
-        return False, "auto-remediation not armed (SENTINEL_AUTO_REMEDIATE unset)"
-    allowed, why = rules.auto_remediate_allowed(record.alert)
-    if not allowed:
-        return False, why
-    if not v or not v.proposed_action:
-        return False, "no proposed action"
-    if v.disposition != "actionable":
-        return False, f"disposition is {v.disposition}"
-    if v.action_verified is not True:
-        return False, "action target was never observed in tool output"
-    if store.was_applied(v.proposed_action):
-        return False, "already applied (idempotent skip)"
-    return True, why
-
-
-def auto_remediate(record):
-    """Apply the fix unattended, but only if every gate agrees. Refusals are recorded
-    and the alert is left for a human — never silently dropped."""
-    allowed, why = _auto_gate(record)
-    store.audit(
-        "auto_remediate_allowed" if allowed else "auto_remediate_skipped",
-        {"id": record.alert.id, "reason": why,
-         "command": record.verdict.proposed_action if record.verdict else None},
-    )
-    record.recon_log.append(
-        f"auto-remediation: {'firing — ' + why if allowed else 'skipped — ' + why}"
-    )
-    if not allowed:
-        return record
-    return remediate(record, mode="auto")
 
 
 def remediate(record, mode="manual"):

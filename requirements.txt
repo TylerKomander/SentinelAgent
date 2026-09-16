@@ -1,7 +1,6 @@
 fastapi>=0.110
 uvicorn[standard]>=0.27
 anthropic>=0.40
-pyyaml>=6
 
 # Only needed for the subscription backend (SENTINEL_PROVIDER=claude_agent).
 # Safe to skip if you authenticate with an ANTHROPIC_API_KEY.
