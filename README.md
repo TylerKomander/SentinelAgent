@@ -97,11 +97,27 @@ job needs.
 
 ## Where it stands
 
-Proven: the full loop has run live on WSL against Claude Sonnet 4.6 — recon, verdict, incident report
-— with out-of-scope targets refused, `rm -rf` refused by the deny list, and repeat alerts deduplicating
-onto one note instead of spawning a second.
+Proven on a real lab, not a mock. A Kali attacker and an Ubuntu victim sit on an isolated host-only
+network with Suricata watching the victim's lab interface. An `nmap` from the attacker raises a
+genuine IDS alert; the dashboard picks it up; the analyst — Claude Sonnet 4.6 — investigates with
+real `nmap` and `whois` against in-scope hosts only, names the attacker rather than the host the
+alert happened to list first, and proposes a `ufw` block. Clicking Apply fix enforced that rule on
+the victim's firewall, and it was reversed by hand afterwards. Out-of-scope targets were refused
+throughout, and every refusal is in `data/audit.jsonl`.
 
-Not yet: a per-day token budget and a persistent alert queue.
+The memory is the part worth reading. A second attack on the same victim from a *different* source
+address was recognised as the same campaign: the agent recalled the earlier incident note, cited it
+by filename, and proposed that the first block had pushed the attacker onto a new address. Nothing
+in the prompt said the two were related — deterministic recall put the earlier note in front of the
+model before it started, and it drew the line itself.
+
+The lab itself is written up in [`docs/lab.md`](docs/lab.md) — the two-machine topology, the two
+Suricata settings that decide whether anything fires at all, the unprivileged sudo path, and the
+`ufw` default that will lock you out of your own box if you let it.
+
+Not yet: a per-day token budget and a persistent alert queue. **The alert queue is in memory, so
+restarting the app clears the board.** That is deliberate for now rather than surprising — the
+Suricata read offset is persisted, so a restart does not replay old events back onto a fresh queue.
 
 **What a small local model is actually like**, measured on `qwen2.5:7b` against Ollama on an
 8 GB RTX 2080 SUPER. A triage takes about 40 seconds. The scope wall held every time it tried an
